@@ -1,0 +1,29 @@
+<h1>Витрати</h1>
+<p>Загальна сумма: {{ total|floatformat:2 }}</p>
+<form method="post" action="{% url 'logout' %}">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{% url 'login' %}">
+    <button type="submit">Вийти</button>
+</form>
+<p>
+    <a href="{% url 'expenses:create' %}">Додати витрату</a>
+</p>
+<ul>
+    {% for expense in expenses %}
+        <li>
+            {{ expense.spent_at }} — {{ expense.description }}: {{ expense.amount }}
+            <a href="{% url 'expenses:update' expense.pk %}">Редагувати</a>
+
+            <form
+                method="POST"
+                action="{% url 'expenses:delete' expense.pk %}"
+                style="display: inline;"
+            >
+                {% csrf_token %}
+                <button type="submit">Delete</button>
+            </form>
+        </li>
+    {% empty %}
+        <li>Витрат поки немає.</li>
+    {% endfor %}
+</ul>

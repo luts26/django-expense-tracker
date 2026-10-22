@@ -1,0 +1,16 @@
+<h1>Вхід</h1>
+
+{% if form.errors %}
+    <p>Неправильне ім’я користувача або пароль.</p>
+{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+
+    {% if next %}
+        <input type="hidden" name="next" value="{{ next }}">
+    {% endif %}
+
+    <button type="submit">Увійти</button>
+</form>
