@@ -3,11 +3,11 @@ from decimal import Decimal
 import json
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 from django.db import IntegrityError, transaction
 
-from .models import Expense
+from .models import Category, Expense
 
 class ExpenseModelTest(TestCase):
     def test_string_representation(self):
@@ -94,6 +94,55 @@ class ExpenseCreateViewTest(TestCase):
         self.assertEqual(expense.amount, Decimal("15.75"))
         self.assertEqual(expense.description, "Транспорт")
 
+    def test_shows_only_current_users_categories(self):
+        user_model = get_user_model()
+        current_user = user_model.objects.create_user(username="creator")
+        other_user = user_model.objects.create_user(username="other")
+
+        own_category = Category.objects.create(
+            owner=current_user,
+            name="Транспорт",
+        )
+        Category.objects.create(
+            owner=other_user,
+            name="Other category",
+        )
+
+        self.client.force_login(current_user)
+        response = self.client.get(reverse("expenses:create"))
+
+        category_queryset = response.context["form"].fields["category"].queryset
+
+        self.assertQuerySetEqual(
+            category_queryset,
+            [own_category],
+        )
+
+    def test_rejects_another_users_category(self):
+        user_model = get_user_model()
+        current_user = user_model.objects.create_user(username="creator")
+        other_user = user_model.objects.create_user(username="other")
+
+        other_category = Category.objects.create(
+            owner=other_user,
+            name="Other category",
+        )
+
+        self.client.force_login(current_user)
+        response = self.client.post(
+            reverse("expenses:create"),
+            {
+                "amount": "25.00",
+                "description": "Спроба підміни категорії",
+                "spent_at": "2026-10-23",
+                "category": other_category.pk,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("category", response.context["form"].errors)
+        self.assertFalse(Expense.objects.exists())
+
 class ExpenseApiListTest(TestCase):
     def test_returns_only_current_users_expenses(self):
         user_model = get_user_model()
@@ -126,6 +175,7 @@ class ExpenseApiListTest(TestCase):
                         "amount": "35.50",
                         "description": "Автобус",
                         "spent_at": "2026-10-21",
+                        "category": None,
                     },
                 ],
             },
@@ -142,6 +192,10 @@ class ExpenseApiListTest(TestCase):
 
     def test_creates_expense_from_json(self):
         user = get_user_model().objects.create_user(username="api-creator")
+        category = Category.objects.create(
+            owner=user,
+            name="Транспорт",
+        )
         self.client.force_login(user)
 
         response = self.client.post(
@@ -151,12 +205,20 @@ class ExpenseApiListTest(TestCase):
                     "amount": "118.00",
                     "description": "Taxi",
                     "spent_at": "2026-10-21",
+                    "category": category.pk,
                 }
             ),
             content_type="application/json",
         )
 
         self.assertEqual(response.status_code, 201)
+        self.assertEqual(
+            response.json()["expense"]["category"],
+            {
+                "id": category.pk,
+                "name": "Транспорт",
+            },
+        )
 
         expense = Expense.objects.get()
         self.assertEqual(expense.owner, user)
@@ -201,6 +263,53 @@ class ExpenseApiListTest(TestCase):
         self.assertIn("amount", response.json()["errors"])
         self.assertFalse(Expense.objects.exists())
 
+    def test_rejects_another_users_category(self):
+        user_model = get_user_model()
+        current_user = user_model.objects.create_user(username="category-user")
+        other_user = user_model.objects.create_user(username="category-other")
+        other_category = Category.objects.create(
+            owner=other_user,
+            name="Other category",
+        )
+        self.client.force_login(current_user)
+
+        response = self.client.post(
+            reverse("expenses:api-list"),
+            data=json.dumps(
+                {
+                    "category": other_category.pk,
+                    "amount": "14.00",
+                    "description": "Спроба підміни",
+                    "spent_at": "2026-10-23",
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("category", response.json()["errors"])
+        self.assertFalse(Expense.objects.exists())
+
+    def test_post_requires_csrf_token(self):
+        user = get_user_model().objects.create_user(username="csrf-user")
+        client = Client(enforce_csrf_checks=True)
+        client.force_login(user)
+
+        response = client.post(
+            reverse("expenses:api-list"),
+            data=json.dumps(
+                {
+                    "amount": "55.00",
+                    "description": "csrf test",
+                    "spent_at": "2026-10-23",
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(Expense.objects.exists())
+
 class ExpenseUpdateViewTest(TestCase):
     def test_returns_404_for_another_user_expense(self):
         user_model = get_user_model()
@@ -220,6 +329,40 @@ class ExpenseUpdateViewTest(TestCase):
         )
 
         self.assertEqual(response.status_code, 404)
+
+    def test_rejects_another_users_category(self):
+        user_model = get_user_model()
+        current_user = user_model.objects.create_user(username="editor")
+        other_user = user_model.objects.create_user(username="other")
+
+        expense = Expense.objects.create(
+            owner=current_user,
+            amount=Decimal("20.00"),
+            description="My spending",
+            spent_at=date(2026, 10, 23),
+        )
+        other_category = Category.objects.create(
+            owner=other_user,
+            name="Other category",
+        )
+
+        self.client.force_login(current_user)
+        response = self.client.post(
+            reverse("expenses:update", args=[expense.pk]),
+            {
+                "amount": "20.00",
+                "description": "Changed spending",
+                "spent_at": "2026-10-23",
+                "category": other_category.pk
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("category", response.context["form"].errors)
+
+        expense.refresh_from_db()
+        self.assertIsNone(expense.category)
+        self.assertEqual(expense.description, "My spending")
 
 class ExpenseDeleteViewTest(TestCase):
     def test_deletes_own_expense(self):
@@ -255,3 +398,12 @@ class ExpenseDeleteViewTest(TestCase):
 
         self.assertEqual(response.status_code, 405)
         self.assertTrue(Expense.objects.filter(pk=expense.pk).exists())
+
+class CategoryModelTest(TestCase):
+    def test_rejects_duplicate_name_for_same_owner(self):
+        user = get_user_model().objects.create_user(username="category-owner")
+        Category.objects.create(owner=user, name="Продукти")
+
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                Category.objects.create(owner=user, name="Продукти")

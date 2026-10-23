@@ -11,9 +11,26 @@ from django.db.models import Sum
 from .forms import ExpenseForm
 from .models import Expense
 
+def _expense_to_dict(expense):
+    category = None
+
+    if expense.category is not None:
+        category = {
+            "id": expense.category.id,
+            "name": expense.category.name,
+        }
+
+    return {
+        "id": expense.id,
+        "amount": expense.amount,
+        "description": expense.description,
+        "spent_at": expense.spent_at,
+        "category": category,
+    }
+
 @login_required
 def expense_list(request):
-    expenses = Expense.objects.filter(
+    expenses = Expense.objects.select_related("category").filter(
         owner=request.user,
     ).order_by("-spent_at", "-id")
 
@@ -32,7 +49,7 @@ def expense_list(request):
 @login_required
 def expense_create(request):
     if request.method == "POST":
-        form = ExpenseForm(request.POST)
+        form = ExpenseForm(request.POST, user=request.user)
 
         if form.is_valid():
             expense = form.save(commit=False)
@@ -41,7 +58,7 @@ def expense_create(request):
 
             return redirect("expenses:list")
     else:
-        form = ExpenseForm()
+        form = ExpenseForm(user=request.user)
 
     return render(
         request,
@@ -61,13 +78,20 @@ def expense_update(request, pk):
     )
 
     if request.method == "POST":
-        form = ExpenseForm(request.POST, instance=expense)
+        form = ExpenseForm(
+            request.POST,
+            instance=expense,
+            user=request.user,
+        )
 
         if form.is_valid():
             form.save()
             return redirect("expenses:list")
     else:
-        form = ExpenseForm(instance=expense)
+        form = ExpenseForm(
+            instance=expense,
+            user=request.user,
+        )
 
     return render(
         request,
@@ -94,16 +118,13 @@ def expense_delete(request, pk):
 @require_http_methods(["GET", "POST"])
 def expense_api_list(request):
     if request.method == "GET":
-        expenses = Expense.objects.filter(
+        expenses = Expense.objects.select_related("category").filter(
             owner=request.user
-        ).order_by("-spent_at", "-id").values(
-            "id",
-            "amount",
-            "description",
-            "spent_at",
-        )
+        ).order_by("-spent_at", "-id")
 
-        return JsonResponse({"expenses": list(expenses)})
+        data = [_expense_to_dict(expense) for expense in expenses]
+
+        return JsonResponse({"expenses": data})
 
     try:
         data = json.loads(request.body)
@@ -113,7 +134,7 @@ def expense_api_list(request):
             status=400,
         )
 
-    form = ExpenseForm(data)
+    form = ExpenseForm(data, user=request.user)
 
     if not form.is_valid():
         return JsonResponse(
@@ -127,12 +148,7 @@ def expense_api_list(request):
 
     return JsonResponse(
         {
-            "expense": {
-                "id": expense.id,
-                "amount": expense.amount,
-                "description": expense.description,
-                "spent_at": expense.spent_at,
-            }
+            "expense": _expense_to_dict(expense)
         },
         status=201,
     )
