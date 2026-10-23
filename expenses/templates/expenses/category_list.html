@@ -1,0 +1,17 @@
+<h1>Категорії</h1>
+
+<p>
+    <a href="{% url 'expenses:category-create' %}">
+        Додати категорію
+    </a>
+</p>
+
+<ul>
+    {% for category in categories %}
+        <li>{{ category.name }}</li>
+    {% empty %}
+        <li>Категорій поки немає.</li>
+    {% endfor %}
+</ul>
+
+<a href="{% url 'expenses:list' %}">Назад до витрат</a>

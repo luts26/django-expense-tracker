@@ -8,6 +8,7 @@ from django.urls import reverse
 from django.db import IntegrityError, transaction
 
 from .models import Category, Expense
+from .forms import CategoryForm
 
 class ExpenseModelTest(TestCase):
     def test_string_representation(self):
@@ -398,6 +399,136 @@ class ExpenseDeleteViewTest(TestCase):
 
         self.assertEqual(response.status_code, 405)
         self.assertTrue(Expense.objects.filter(pk=expense.pk).exists())
+
+class CategoryListViewTest(TestCase):
+    def test_shows_only_current_users_categories(self):
+        user_model = get_user_model()
+        current_user = user_model.objects.create_user(username="current")
+        other_user = user_model.objects.create_user(username="other")
+
+        Category.objects.create(
+            owner=current_user,
+            name="My category",
+        )
+        Category.objects.create(
+            owner=other_user,
+            name="Other category",
+        )
+
+        self.client.force_login(current_user)
+        response = self.client.get(current_user)
+        response = self.client.get(
+            reverse("expenses:category-list")
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "My category")
+        self.assertNotContains(response, "Other category")
+
+    def test_requires_authentication(self):
+        list_url = reverse("expenses:category-list")
+        login_url = reverse("login")
+
+        response = self.client.get(list_url)
+
+        self.assertRedirects(
+            response,
+            f"{login_url}?next={list_url}"
+        )
+
+class CategoryCreateViewTest(TestCase):
+    def test_assigns_authenticated_user_as_owner(self):
+        user = get_user_model().objects.create_user(
+            username="category-creator"
+        )
+        self.client.force_login(user)
+
+        response = self.client.post(
+            reverse("expenses:category-create"),
+            {
+                "name": "Продукти",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("expenses:category-list"),
+        )
+
+        category = Category.objects.get()
+        self.assertEqual(category.owner, user)
+        self.assertEqual(category.name, "Продукти")
+
+    def test_rejects_duplicate_name_for_same_owner(self):
+        user = get_user_model().objects.create_user(
+            username="category-owner"
+        )
+        Category.objects.create(
+            owner=user,
+            name="Продукти",
+        )
+        self.client.force_login(user)
+
+        response = self.client.post(
+            reverse("expenses:category-create"),
+            {
+                "name": "Продукти",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("name", response.context["form"].errors)
+        self.assertEqual(Category.objects.count(), 1)
+
+    def test_allows_same_name_for_different_owners(self):
+        user_model = get_user_model()
+        current_user = user_model.objects.create_user(username="current")
+        other_user = user_model.objects.create_user(username="other")
+
+        Category.objects.create(
+            owner=other_user,
+            name="Продукти",
+        )
+        self.client.force_login(current_user)
+
+        response = self.client.post(
+            reverse("expenses:category-create"),
+            {
+                "name": "Продукти",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("expenses:category-list"),
+        )
+        self.assertTrue(
+            Category.objects.filter(
+                owner=current_user,
+                name="Продукти",
+            ).exists()
+        )
+        self.assertEqual(Category.objects.count(), 2)
+
+    def test_requires_authentication(self):
+        create_url = reverse("expenses:category-create")
+        login_url = reverse("login")
+
+        response = self.client.get(create_url)
+
+        self.assertRedirects(
+            response,
+            f"{login_url}?next={create_url}",
+        )
+
+class CategoryFormTest(TestCase):
+    def test_exposes_only_name_field(self):
+        form = CategoryForm()
+
+        self.assertEqual(
+            list(form.fields),
+            ["name"],
+        )
 
 class CategoryModelTest(TestCase):
     def test_rejects_duplicate_name_for_same_owner(self):

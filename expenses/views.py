@@ -8,8 +8,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.db.models import Sum
 
 
-from .forms import ExpenseForm
-from .models import Expense
+from .forms import CategoryForm, ExpenseForm
+from .models import Category, Expense
 
 def _expense_to_dict(expense):
     category = None
@@ -27,6 +27,43 @@ def _expense_to_dict(expense):
         "spent_at": expense.spent_at,
         "category": category,
     }
+
+@login_required
+def category_list(request):
+    categories = Category.objects.filter(
+        owner=request.user,
+    )
+
+    return render(
+        request,
+        "expenses/category_list.html",
+        {
+            "categories": categories
+        }
+    )
+
+@login_required
+def category_create(request):
+    if request.method == "POST":
+        form = CategoryForm(request.POST, user=request.user)
+
+        if form.is_valid():
+            category = form.save(commit=False)
+            category.owner = request.user
+            category.save()
+
+            return redirect("expenses:category-list")
+    else:
+        form = CategoryForm(user=request.user)
+
+    return render(
+        request,
+        "expenses/category_form.html",
+        {
+            "form": form,
+            "title": "New category",
+        },
+    )
 
 @login_required
 def expense_list(request):

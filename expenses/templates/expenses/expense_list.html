@@ -7,6 +7,7 @@
 </form>
 <p>
     <a href="{% url 'expenses:create' %}">Додати витрату</a>
+    <a href="{% url 'expenses:category-list' %}">Категорії</a>
 </p>
 <ul>
     {% for expense in expenses %}
