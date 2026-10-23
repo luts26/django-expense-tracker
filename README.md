@@ -8,7 +8,7 @@ A personal expense tracker built with Django. Users can manage their expenses th
 
 - User authentication using Django's built-in authentication system.
 - Create, view, edit, and delete expenses.
-- Assign optional per-user categories to expenses.
+- Create and view per-user categories and assign them to expenses.
 - Per-user data isolation: users can access only their own expenses.
 - Total expense calculation.
 - Expenses ordered by date.
@@ -138,7 +138,7 @@ configuration.
 
 ## Planned Improvements
 
-- Add category management pages.
+- Add editing and deletion for categories.
 - Add filtering and pagination.
 - Improve the user interface.
 - Add reporting and export functionality.
