@@ -66,6 +66,39 @@ def category_create(request):
     )
 
 @login_required
+def category_update(request, pk):
+    category = get_object_or_404(
+        Category,
+        pk=pk,
+        owner=request.user,
+    )
+
+    if request.method == "POST":
+        form = CategoryForm(
+            request.POST,
+            instance=category,
+            user=request.user,
+        )
+
+        if form.is_valid():
+            form.save()
+            return redirect("expenses:category-list")
+    else:
+        form = CategoryForm(
+            instance=category,
+            user=request.user,
+        )
+
+    return render(
+        request,
+        "expenses/category_form.html",
+        {
+            "form": form,
+            "title": "Редагувати категорію"
+        }
+    )
+
+@login_required
 def expense_list(request):
     expenses = Expense.objects.select_related("category").filter(
         owner=request.user,

@@ -521,6 +521,98 @@ class CategoryCreateViewTest(TestCase):
             f"{login_url}?next={create_url}",
         )
 
+class CategoryUpdateViewTest(TestCase):
+    def test_renames_own_category(self):
+        user = get_user_model().objects.create_user(
+            username="category-editor"
+        )
+        category = Category.objects.create(owner=user, name="Продукти")
+        self.client.force_login(user)
+
+        response = self.client.post(
+            reverse("expenses:category-update", args=[category.pk]),
+            {"name": "Їжа"},
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("expenses:category-list"),
+        )
+        category.refresh_from_db()
+        self.assertEqual(category.name, "Їжа")
+
+    def test_allows_saving_with_unchanged_name(self):
+        user = get_user_model().objects.create_user(
+            username="category-editor"
+        )
+        category = Category.objects.create(owner=user, name="Продукти")
+        self.client.force_login(user)
+
+        response = self.client.post(
+            reverse("expenses:category-update", args=[category.pk]),
+            {"name": "Продукти"},
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("expenses:category-list"),
+        )
+        category.refresh_from_db()
+        self.assertEqual(category.name, "Продукти")
+
+    def test_rejects_rename_to_existing_name(self):
+        user = get_user_model().objects.create_user(username="editor")
+        Category.objects.create(owner=user, name="Продукти")
+        category = Category.objects.create(owner=user, name="Їжа")
+        self.client.force_login(user)
+
+        response = self.client.post(
+            reverse("expenses:category-update", args=[category.pk]),
+            {"name": "Продукти"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("name", response.context["form"].errors)
+        category.refresh_from_db()
+        self.assertEqual(category.name, "Їжа")
+
+    def test_cannot_rename_another_user_category(self):
+        user_model = get_user_model()
+        current_user = user_model.objects.create_user(username="editor")
+        other_user = user_model.objects.create_user(username="other-owner")
+
+        category = Category.objects.create(
+            owner=other_user,
+            name="Продукти",
+        )
+
+        self.client.force_login(current_user)
+        response = self.client.post(
+            reverse("expenses:category-update", args=[category.pk]),
+            {"name": "Зламано"},
+        )
+
+        self.assertEqual(response.status_code, 404)
+        category.refresh_from_db()
+        self.assertEqual(category.name, "Продукти")
+
+    def test_returns_404_for_another_user_category(self):
+        user_model = get_user_model()
+        current_user = user_model.objects.create_user(username="editor")
+        other_user = user_model.objects.create_user(username="other-owner")
+
+        category = Category.objects.create(
+            owner=other_user,
+            name="Продукти",
+        )
+
+        self.client.force_login(current_user)
+        response = self.client.get(
+            reverse("expenses:category-update", args=[category.pk])
+        )
+
+        self.assertEqual(response.status_code, 404)
+
 class CategoryFormTest(TestCase):
     def test_exposes_only_name_field(self):
         form = CategoryForm()

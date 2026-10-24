@@ -38,7 +38,7 @@ class CategoryForm(forms.ModelForm):
         )
 
         if self.instance.pk:
-            categories = categories.exclude(pk.self.instance.pk)
+            categories = categories.exclude(pk=self.instance.pk)
 
         if self.user is not None and categories.exists():
             raise forms.ValidationError(
