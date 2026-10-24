@@ -3,12 +3,14 @@ from decimal import Decimal
 import json
 
 from django.contrib.auth import get_user_model
-from django.test import Client, TestCase
 from django.urls import reverse
 from django.db import IntegrityError, transaction
+from django.test import Client, TestCase
+from rest_framework.test import APIRequestFactory
 
 from .models import Category, Expense
 from .forms import CategoryForm
+from .serializers import ExpenseSerializer
 
 class ExpenseModelTest(TestCase):
     def test_string_representation(self):
@@ -630,3 +632,54 @@ class CategoryModelTest(TestCase):
         with self.assertRaises(IntegrityError):
             with transaction.atomic():
                 Category.objects.create(owner=user, name="Продукти")
+
+class ExpenseSerializerTest(TestCase):
+    def test_rejects_category_of_another_user(self):
+        user_model = get_user_model()
+        owner = user_model.objects.create_user(username="api-owner")
+        other = user_model.objects.create_user(username="api-other")
+        foreign_category = Category.objects.create(owner=other, name="Чужа")
+
+        request = APIRequestFactory().post("/")
+        request.user = owner
+
+        serializer = ExpenseSerializer(
+            data={
+                "category": foreign_category.pk,
+                "amount": "12.50",
+                "description": "Кава",
+                "spent_at": "2026-10-17",
+            },
+            context={"request": request},
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("category", serializer.errors)
+        self.assertEqual(
+            serializer.errors["category"][0].code,
+            "does_not_exist"
+        )
+
+    def test_rejects_nonexistent_category_id(self):
+        user_model = get_user_model()
+        owner = user_model.objects.create_user(username="api-owner")
+
+        request = APIRequestFactory().post("/")
+        request.user = owner
+
+        serializer = ExpenseSerializer(
+            data={
+                "category": 999999,
+                "amount": "12.50",
+                "description": "Кава",
+                "spent_at": "2026-10-17",
+            },
+            context={"request": request},
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("category", serializer.errors)
+        self.assertEqual(
+            serializer.errors["category"][0].code,
+            "does_not_exist"
+        )
