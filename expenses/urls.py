@@ -1,8 +1,13 @@
+from rest_framework.routers import SimpleRouter
 from django.urls import path
 
 from . import views
+from .api import ExpenseViewSet
 
 app_name = "expenses"
+router = SimpleRouter()
+
+router.register("api/expenses", ExpenseViewSet, basename="api-expense")
 
 urlpatterns = [
     path("api/", views.expense_api_list, name="api-list"),
@@ -14,3 +19,5 @@ urlpatterns = [
     path("<int:pk>/delete/", views.expense_delete, name="delete"),
     path("", views.expense_list, name="list"),
 ]
+
+urlpatterns += router.urls

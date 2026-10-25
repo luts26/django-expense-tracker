@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.db import IntegrityError, transaction
 from django.test import Client, TestCase
-from rest_framework.test import APIRequestFactory
+from rest_framework.test import APITestCase, APIRequestFactory
 
 from .models import Category, Expense
 from .forms import CategoryForm
@@ -683,3 +683,94 @@ class ExpenseSerializerTest(TestCase):
             serializer.errors["category"][0].code,
             "does_not_exist"
         )
+
+class ExpenseApiTest(APITestCase):
+    def test_list_returns_only_own_expenses(self):
+        user_model = get_user_model()
+        owner = user_model.objects.create_user(username="api-list-owner")
+        other = user_model.objects.create_user(username="api-list-other")
+        Expense.objects.create(
+            owner=owner,
+            amount=Decimal("10.00"),
+            description="My",
+            spent_at=date(2026, 10, 17),
+        )
+        Expense.objects.create(
+            owner=other,
+            amount=Decimal("20.00"),
+            description="Other",
+            spent_at=date(2026, 10, 17),
+        )
+        self.client.force_authenticate(user=owner)
+
+        response = self.client.get(
+            reverse("expenses:api-expense-list")
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [item["description"] for item in response.data],
+            ["My"],
+        )
+
+    def test_create_sets_owner_from_request(self):
+        user_model = get_user_model()
+        owner = user_model.objects.create_user(username="api-owner")
+        other = user_model.objects.create_user(username="api-other")
+        
+        self.client.force_authenticate(user=owner)
+
+        response = self.client.post(
+            reverse("expenses:api-expense-list"),
+            {
+                "amount": "12.50",
+                "description": "Кава",
+                "spent_at": "2026-10-17",
+                "owner": other.pk,
+            },
+        )
+
+        self.assertEqual(response.status_code, 201)
+        expense = Expense.objects.get()
+        self.assertEqual(expense.owner, owner)
+
+    def test_cannot_retrieve_another_user_expense(self):
+        user_model = get_user_model()
+        owner = user_model.objects.create_user(username="api-owner")
+        other = user_model.objects.create_user(username="api-other")
+        
+        foreign_expense = Expense.objects.create(
+            owner=other,
+            amount=Decimal("50.00"),
+            description="Чужа витрата",
+            spent_at=date(2026, 10, 17),
+        )
+        self.client.force_authenticate(user=owner)
+
+        response = self.client.get(
+            reverse("expenses:api-expense-detail", args=[foreign_expense.pk])
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_create_rejects_category_of_another_user(self):
+        user_model = get_user_model()
+        owner = user_model.objects.create_user(username="api-owner")
+        other = user_model.objects.create_user(username="api-other")
+        
+        foreign_category = Category.objects.create(owner=other, name="Чужа")
+        self.client.force_authenticate(user=owner)
+
+        response = self.client.post(
+            reverse("expenses:api-expense-list"),
+            {
+                "category": foreign_category.pk,
+                "amount": "12.50",
+                "description": "Кава",
+                "spent_at": "2026-10-17",
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("category", response.data)
+        self.assertEqual(Expense.objects.count(), 0)
