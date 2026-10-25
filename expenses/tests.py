@@ -774,3 +774,39 @@ class ExpenseApiTest(APITestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("category", response.data)
         self.assertEqual(Expense.objects.count(), 0)
+
+    def test_list_filters_by_category(self):
+        user_model = get_user_model()
+        owner = user_model.objects.create_user(username="api-filter-owner")
+        
+        category_food = Category.objects.create(owner=owner, name="Продукти")
+        category_cafe = Category.objects.create(owner=owner, name="Кафе")
+
+        Expense.objects.create(
+            owner=owner,
+            category=category_food,
+            amount=Decimal("15.50"),
+            description="Сільпо",
+            spent_at=date(2026, 10, 17),
+        )
+        Expense.objects.create(
+            owner=owner,
+            category=category_cafe,
+            amount=Decimal("12.50"),
+            description="Кава",
+            spent_at=date(2026, 10, 17),
+        )
+        
+        self.client.force_authenticate(user=owner)
+
+        response = self.client.get(
+            reverse("expenses:api-expense-list"),
+            {"category": category_food.pk}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        
+        self.assertEqual(
+            [item["description"] for item in response.data],
+            ["Сільпо"],
+        )
