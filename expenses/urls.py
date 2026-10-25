@@ -1,4 +1,5 @@
 from rest_framework.routers import SimpleRouter
+from rest_framework.authtoken.views import obtain_auth_token
 from django.urls import path
 
 from . import views
@@ -10,6 +11,7 @@ router = SimpleRouter()
 router.register("api/expenses", ExpenseViewSet, basename="api-expense")
 
 urlpatterns = [
+    path("api/token/", obtain_auth_token, name="api-token"),
     path("api/", views.expense_api_list, name="api-list"),
     path("categories/", views.category_list, name="category-list"),
     path("categories/new/", views.category_create, name="category-create"),
