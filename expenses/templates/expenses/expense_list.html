@@ -5,40 +5,46 @@
 {% block content %}
 
 <h1>Витрати</h1>
-<p>Загальна сумма: {{ total|floatformat:2 }}</p>
-<form method="post" action="{% url 'logout' %}">
-    {% csrf_token %}
-    <input type="hidden" name="next" value="{% url 'login' %}">
-    <button type="submit">Вийти</button>
-</form>
-<p>
-    <a href="{% url 'expenses:create' %}">Додати витрату</a>
-    <a href="{% url 'expenses:category-list' %}">Категорії</a>
-</p>
-<ul>
-    {% for expense in expenses %}
-        <li>
-            {{ expense.spent_at }} -
-            {% if expense.category %}
-                [{{ expense.category.name }}]
-            {% else %}
-                [Without category]
-            {% endif %}
-            {{ expense.description }}: {{ expense.amount }}
-            <a href="{% url 'expenses:update' expense.pk %}">Редагувати</a>
+<p class="total">Загальна сума: <strong>{{ total|floatformat:2 }}</strong></p>
+<p><a href="{% url 'expenses:create' %}">Додати витрату</a></p>
 
-            <form
-                method="POST"
-                action="{% url 'expenses:delete' expense.pk %}"
-                style="display: inline;"
-            >
-                {% csrf_token %}
-                <button type="submit">Delete</button>
-            </form>
-        </li>
-    {% empty %}
-        <li>Витрат поки немає.</li>
-    {% endfor %}
-</ul>
+{% if expenses %}
+    <table class="expenses">
+        <thead>
+            <tr>
+                <th>Дата</th>
+                <th>Категорія</th>
+                <th>Опис</th>
+                <th class="num">Сума</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for expense in expenses %}
+                <tr>
+                    <td>{{ expense.spent_at|date:"d.m.Y" }}</td>
+                    <td>
+                        {% if expense.category %}
+                            {{ expense.category.name }}
+                        {% else %}
+                            Без категорії
+                        {% endif %}
+                    </td>
+                    <td>{{ expense.description }}</td>
+                    <td class="num">{{ expense.amount }}</td>
+                    <td class="actions">
+                        <a href="{% url 'expenses:update' expense.pk %}">Редагувати</a>
+                        <form method="post" action="{% url 'expenses:delete' expense.pk %}">
+                            {% csrf_token %}
+                            <button type="submit">Видалити</button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>Витрат поки немає.</p>
+{% endif %}
 
 {% endblock %}

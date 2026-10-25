@@ -8,6 +8,19 @@
     <link rel="stylesheet" type="text/css" href="{% static 'css/app.css' %}">
 </head>
 <body>
+    <header class="topbar">
+        {% if user.is_authenticated %}
+            <nav>
+                <a href="{% url 'expenses:list' %}">Витрати</a>
+                <a href="{% url 'expenses:category-list' %}">Категорії</a>
+            </nav>
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{% url 'login' %}">
+                <button type="submit">Вийти ({{ user.username }})</button>
+            </form>
+        {% endif %}
+    </header>
     <main>
         {% block content %}{% endblock %}
     </main>

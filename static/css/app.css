@@ -33,3 +33,111 @@ button {
     background: var(--card);
     cursor: pointer;
 }
+
+.topbar {
+    max-width: 760px;
+    margin: 1rem auto 0;
+    padding: 0 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.topbar nav a {
+    margin-right: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.topbar form {
+    margin: 0;
+}
+
+.total {
+    font-size: 1.1rem;
+}
+
+table.expenses {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table.expenses th,
+table.expenses td {
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+}
+
+table.expenses th {
+    color: var(--muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+table.expenses .num {
+    text-align: right;
+    white-space: nowrap;
+}
+
+table.expenses .actions {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+table.expenses .actions form {
+    margin: 0;
+}
+
+main form p {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin: 0 0 1rem;
+}
+
+main form label {
+    font-weight: 600;
+}
+
+main form input:not([type="hidden"]),
+main form select {
+    padding: 0.5rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font: inherit;
+}
+
+main form input:focus,
+main form select:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+ul.errorlist {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    color: #b42318;
+    font-size: 0.9rem;
+}
+
+.helptext {
+    color: var(--muted);
+    font-size: 0.85rem;
+}
+
+ul.items {
+    margin: 1rem 0;
+    padding: 0;
+    list-style: none;
+}
+
+ul.items li {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--border);
+}
