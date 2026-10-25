@@ -1,3 +1,9 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title|default:"Вхід" }}{% endblock %}
+
+{% block content %}
+
 <h1>Вхід</h1>
 
 {% if form.errors %}
@@ -14,3 +20,5 @@
 
     <button type="submit">Увійти</button>
 </form>
+
+{% endblock %}

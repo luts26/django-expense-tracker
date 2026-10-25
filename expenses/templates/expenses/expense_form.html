@@ -1,3 +1,9 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+
 <h1>{{ title }}</h1>
 
 <form method="post">
@@ -7,3 +13,5 @@
 </form>
 
 <a href="{% url 'expenses:list' %}">Назад до списку</a>
+
+{% endblock %}

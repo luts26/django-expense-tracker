@@ -1,3 +1,9 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title|default:"Категорії" }}{% endblock %}
+
+{% block content %}
+
 <h1>Категорії</h1>
 
 <p>
@@ -18,3 +24,5 @@
 </ul>
 
 <a href="{% url 'expenses:list' %}">Назад до витрат</a>
+
+{% endblock %}

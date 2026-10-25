@@ -1,3 +1,9 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title|default:"Витрати" }}{% endblock %}
+
+{% block content %}
+
 <h1>Витрати</h1>
 <p>Загальна сумма: {{ total|floatformat:2 }}</p>
 <form method="post" action="{% url 'logout' %}">
@@ -34,3 +40,5 @@
         <li>Витрат поки немає.</li>
     {% endfor %}
 </ul>
+
+{% endblock %}
