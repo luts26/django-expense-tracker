@@ -11,6 +11,7 @@
     <header class="topbar">
         {% if user.is_authenticated %}
             <nav>
+                <a href="{% url 'expenses:report' %}">Звіт</a>
                 <a href="{% url 'expenses:list' %}">Витрати</a>
                 <a href="{% url 'expenses:category-list' %}">Категорії</a>
             </nav>

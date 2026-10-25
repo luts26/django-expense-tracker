@@ -827,3 +827,35 @@ class ExpenseApiTest(APITestCase):
         self.assertEqual(response.data["count"], 11),
         self.assertEqual(len(response.data["results"]), 10)
         self.assertIsNotNone(response.data["next"])
+
+class ExpenseReportViewTest(TestCase):
+    def test_report_contains_only_own_expenses(self):
+        user_model = get_user_model()
+        owner = user_model.objects.create_user(username="report-owner")
+        other = user_model.objects.create_user(username="report-other")
+        Expense.objects.create(
+            owner=owner,
+            amount=Decimal("10.00"),
+            description="My",
+            spent_at=date(2026, 10, 17),
+        )
+        Expense.objects.create(
+            owner=other,
+            amount=Decimal("99.00"),
+            description="Other",
+            spent_at=date(2026, 10, 18)
+        )
+        self.client.force_login(owner)
+
+        response = self.client.get(reverse("expenses:report"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["total"], Decimal("10.00"))
+        self.assertEqual(len(response.context["rows"]), 1)
+
+    def test_report_requires_login(self):
+        url = reverse("expenses:report")
+
+        response = self.client.get(url)
+
+        self.assertRedirects(response, f"{reverse('login')}?next={url}")

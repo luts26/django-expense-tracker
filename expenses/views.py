@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods, require_POST
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.db.models import Sum
+from django.db.models import Count, Sum
 
 
 from .forms import CategoryForm, ExpenseForm
@@ -96,6 +96,22 @@ def category_update(request, pk):
             "form": form,
             "title": "Редагувати категорію"
         }
+    )
+
+@login_required
+def expense_report(request):
+    rows = (
+        Expense.objects.filter(owner=request.user)
+        .values("category__name")
+        .annotate(total=Sum("amount"), count=Count("id"))
+        .order_by("-total")
+    )
+    total = sum(row["total"] for row in rows)
+
+    return render(
+        request,
+        "expenses/expense_report.html",
+        {"rows": rows, "total": total},
     )
 
 @login_required
