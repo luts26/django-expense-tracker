@@ -17,6 +17,7 @@ urlpatterns = [
     path("categories/new/", views.category_create, name="category-create"),
     path("categories/<int:pk>/edit/", views.category_update, name="category-update"),
     path("report/", views.expense_report, name="report"),
+    path("export.csv", views.expense_export_csv, name="export-csv"),
     path("new/", views.expense_create, name="create"),
     path("<int:pk>/edit/", views.expense_update, name="update"),
     path("<int:pk>/delete/", views.expense_delete, name="delete"),

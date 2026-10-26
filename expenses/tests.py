@@ -859,3 +859,49 @@ class ExpenseReportViewTest(TestCase):
         response = self.client.get(url)
 
         self.assertRedirects(response, f"{reverse('login')}?next={url}")
+
+class ExpenseExportCsvTest(TestCase):
+    def test_export_contains_only_own_expenses(self):
+        user_model = get_user_model()
+        owner = user_model.objects.create_user(username="export-owner")
+        other = user_model.objects.create_user(username="export-other")
+        Expense.objects.create(
+            owner=owner,
+            amount=Decimal("10.00"),
+            description="My",
+            spent_at=date(2026, 10, 17)
+        )
+        Expense.objects.create(
+            owner=other,
+            amount=Decimal("99.00"),
+            description="Other",
+            spent_at=date(2026, 10, 17),
+        )
+        self.client.force_login(owner)
+
+        response = self.client.get(reverse("expenses:export-csv"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response["Content-Type"].startswith("text/csv"))
+        self.assertIn("attachment", response["Content-Disposition"])
+        text = response.content.decode("utf-8-sig")
+        self.assertIn("My", text)
+        self.assertNotIn("Other", text)
+
+    def test_export_neutralizes_formulas(self):
+        user_model = get_user_model()
+        owner = user_model.objects.create_user(username="formula-owner")
+        Expense.objects.create(
+            owner=owner,
+            amount=Decimal("15.00"),
+            description="=1+1",
+            spent_at=date(2026, 10, 17)
+        )
+        self.client.force_login(owner)
+
+        response = self.client.get(reverse("expenses:export-csv"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response["Content-Type"].startswith("text/csv"))
+        text = response.content.decode("utf-8-sig")
+        self.assertIn("'=1+1", text)

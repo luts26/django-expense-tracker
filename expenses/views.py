@@ -1,15 +1,21 @@
 from decimal import Decimal
 import json
+import csv
 
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods, require_POST
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.db.models import Count, Sum
 
 
 from .forms import CategoryForm, ExpenseForm
 from .models import Category, Expense
+
+def _csv_save(value):
+    if value and value[0] in "=+-@":
+        return "'" + value
+    return value
 
 def _expense_to_dict(expense):
     category = None
@@ -27,6 +33,30 @@ def _expense_to_dict(expense):
         "spent_at": expense.spent_at,
         "category": category,
     }
+
+@login_required
+def expense_export_csv(request):
+    expenses = (
+        Expense.objects.select_related("category")
+        .filter(owner=request.user)
+        .order_by("-spent_at", "-id")
+    )
+
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = 'attachment; filename="expenses.csv"'
+    response.write("\ufeff")
+
+    writer = csv.writer(response)
+    writer.writerow(["Дата", "Категорія", "Опис", "Сума"])
+    for expense in expenses:
+        writer.writerow([
+            expense.spent_at.isoformat(),
+            _csv_save(expense.category.name) if expense.category else "",
+            _csv_save(expense.description),
+            expense.amount,
+        ])
+    
+    return response
 
 @login_required
 def category_list(request):
