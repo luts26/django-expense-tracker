@@ -1,6 +1,6 @@
 # Django Expense Tracker
 
-A personal expense tracker built with Django. Users can manage their expenses through a web interface and basic JSON endpoints.
+Personal expense tracker built with Django and Django REST Framework: per-user expenses and categories, token-authenticated REST API, category report, CSV export, and automated tests.
 
 **Status:** In active development.
 
@@ -13,18 +13,22 @@ A personal expense tracker built with Django. Users can manage their expenses th
 - Total expense calculation.
 - Expenses ordered by date.
 - Validation of positive amounts at the form and database levels.
-- JSON endpoints for listing and creating expenses.
+- Edit categories; duplicate names are rejected per user.
+- Category report with totals per category.
+- CSV export of the user's expenses (formula-injection safe).
+- REST API for expenses (Django REST Framework) with session and token authentication, pagination, and a `category` filter.
 - Automated tests.
 
 ## Tech Stack
 
 - Python
 - Django
+- Django REST Framework
 - SQLite
 - Django Templates
 - HTML
 
-The JSON endpoints use Django views and `JsonResponse`, without Django REST Framework.
+The original `JsonResponse` endpoints under `/expenses/api/` are kept alongside the Django REST Framework API under `/expenses/api/expenses/`.
 
 ## Local Setup
 
@@ -95,19 +99,52 @@ Check for model changes without migrations:
 python manage.py makemigrations --check --dry-run
 ```
 
+## REST API
+
+The API is available under `/expenses/api/expenses/` and requires authentication.
+
+Obtain a token:
+
+```bash
+curl -X POST http://127.0.0.1:8000/expenses/api/token/ \
+  -d "username=<username>" -d "password=<password>"
+```
+
+Use it in the `Authorization` header:
+
+```bash
+curl -H "Authorization: Token <token>" \
+  http://127.0.0.1:8000/expenses/api/expenses/
+```
+
+| Endpoint | Description |
+|---|---|
+| `GET /expenses/api/expenses/` | Paginated list (10 per page) |
+| `GET /expenses/api/expenses/?category=<id>` | Filter by category |
+| `GET /expenses/api/expenses/?page=2` | Next page |
+| `POST /expenses/api/expenses/` | Create an expense |
+| `GET/PUT/PATCH/DELETE /expenses/api/expenses/<id>/` | Retrieve, update, or delete |
+
+Treat tokens like passwords and do not commit them.
+
 ## Project Structure
 
 ```text
 config/                 Django settings and root URL configuration
 expenses/
     models.py           Expense and category models
-    forms.py            Expense form and validation
-    views.py            Web views and JSON endpoints
+    forms.py            Expense and category forms and validation
+    serializers.py      Django REST Framework serializers
+    api.py              Django REST Framework viewsets
+    views.py            Web views, report, CSV export, and JSON endpoints
     urls.py             Expense routes
     tests.py            Automated tests
     migrations/         Database migrations
     templates/          Expense pages
+static/
+    css/                Stylesheet
 templates/
+    base.html           Base layout
     registration/       Login template
 manage.py               Django management commands
 requirements.txt        Python dependencies
@@ -121,8 +158,7 @@ filter records by the authenticated owner.
 Amounts use `DecimalField`. Validation and a database constraint
 require an amount of at least `0.01`.
 
-The JSON endpoints use session authentication and Django's CSRF
-protection. They do not currently provide token-based authentication.
+The REST API requires authentication (token or session) and returns only the authenticated user's data. Requests for another user's record return `404`, and a category that belongs to another user is rejected by validation.
 
 ## Development Notes
 
@@ -138,7 +174,5 @@ configuration.
 
 ## Planned Improvements
 
-- Add editing and deletion for categories.
-- Add filtering and pagination.
-- Improve the user interface.
-- Add reporting and export functionality.
+- Add deletion for categories.
+- Add date filters to the report.
