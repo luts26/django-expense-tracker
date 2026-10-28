@@ -21,12 +21,15 @@ Personal expense tracker built with Django and Django REST Framework: per-user e
 
 ## Tech Stack
 
+- Docker Compose
 - Python
 - Django
 - Django REST Framework
-- SQLite
+- PostgreSQL
+- SQLite (default)
 - Django Templates
 - HTML
+- CSS
 
 The original `JsonResponse` endpoints under `/expenses/api/` are kept alongside the Django REST Framework API under `/expenses/api/expenses/`.
 
@@ -78,6 +81,48 @@ python manage.py runserver
 
 Open the local address shown in the terminal and sign in using
 the account you created.
+
+## Running with Docker
+
+Requires Docker with the Compose plugin.
+
+Build and start the app and PostgreSQL:
+
+```bash
+docker compose up -d --build
+```
+
+The app applies migrations on start and is available at
+`http://127.0.0.1:8000/expenses/`. Create a user:
+
+```bash
+docker compose exec web python manage.py createsuperuser
+```
+
+Run the tests inside the container:
+
+```bash
+docker compose exec web python manage.py test
+```
+
+Stop the containers (add `-v` to also delete the database volume):
+
+```bash
+docker compose down
+```
+
+PostgreSQL is also published on `127.0.0.1:5433`, so the project can run
+from a local virtual environment against it:
+
+```bash
+export POSTGRES_DB=expenses POSTGRES_USER=expenses POSTGRES_PASSWORD=expenses POSTGRES_PORT=5433
+python manage.py migrate
+```
+
+Without the `POSTGRES_*` variables the project uses SQLite.
+
+The credentials in `docker-compose.yml` are for local development only.
+The container runs Django's development server and is not a production setup.
 
 ## Tests
 
@@ -147,6 +192,8 @@ templates/
     base.html           Base layout
     registration/       Login template
 manage.py               Django management commands
+Dockerfile
+docker-compose.yml
 requirements.txt        Python dependencies
 ```
 
