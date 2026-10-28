@@ -1,5 +1,7 @@
 # Django Expense Tracker
 
+[![CI](https://github.com/luts26/django-expense-tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/luts26/django-expense-tracker/actions/workflows/ci.yml)
+
 Personal expense tracker built with Django and Django REST Framework: per-user expenses and categories, token-authenticated REST API, category report, CSV export, and automated tests.
 
 **Status:** In active development.
