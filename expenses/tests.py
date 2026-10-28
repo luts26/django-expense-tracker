@@ -152,7 +152,7 @@ class ExpenseApiListTest(TestCase):
         current_user = user_model.objects.create_user(username="api-user")
         other_user = user_model.objects.create_user(username="other-api-user")
 
-        Expense.objects.create(
+        expense_current = Expense.objects.create(
             owner=current_user,
             amount=Decimal("35.50"),
             description="Автобус",
@@ -174,7 +174,7 @@ class ExpenseApiListTest(TestCase):
             {
                 "expenses": [
                     {
-                        "id": 1,
+                        "id": expense_current.pk,
                         "amount": "35.50",
                         "description": "Автобус",
                         "spent_at": "2026-10-21",
