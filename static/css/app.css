@@ -57,6 +57,13 @@ button {
     font-size: 1.1rem;
 }
 
+.top-actions {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    margin: 1.2rem 0;
+}
+
 table.expenses {
     width: 100%;
     border-collapse: collapse;

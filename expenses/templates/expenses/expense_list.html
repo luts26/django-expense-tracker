@@ -6,10 +6,10 @@
 
 <h1>Витрати</h1>
 <p class="total">Загальна сума: <strong>{{ total|floatformat:2 }}</strong></p>
-<p>
+<div class="top-actions">
     <a href="{% url 'expenses:create' %}">Додати витрату</a>
     <a href="{% url 'expenses:export-csv' %}">Експорт у CSV</a>
-</p>
+</div>
 
 {% if expenses %}
     <table class="expenses">
