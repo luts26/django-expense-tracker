@@ -18,7 +18,7 @@ Personal expense tracker built with Django and Django REST Framework: per-user e
 
 - User authentication using Django's built-in authentication system.
 - Create, view, edit, and delete expenses.
-- Create and view per-user categories and assign them to expenses.
+- Create, view, edit, and delete per-user categories and assign them to expenses.
 - Per-user data isolation: users can access only their own expenses.
 - Total expense calculation.
 - Expenses ordered by date.
@@ -236,5 +236,4 @@ configuration.
 
 ## Planned Improvements
 
-- Add deletion for categories.
 - Add date filters to the report.

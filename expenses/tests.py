@@ -615,6 +615,46 @@ class CategoryUpdateViewTest(TestCase):
 
         self.assertEqual(response.status_code, 404)
 
+class CategoryDeleteViewTest(TestCase):
+    def test_deletes_own_category_and_keeps_expenses(self):
+        user = get_user_model().objects.create_user(username="category-deleter")
+        category = Category.objects.create(owner=user, name="Продукти")
+        expense = Expense.objects.create(
+            owner=user,
+            category=category,
+            amount=Decimal("10.00"),
+            description="Сільпо",
+            spent_at=date(2026, 10, 17),
+        )
+        self.client.force_login(user)
+
+        response = self.client.post(
+            reverse("expenses:category-delete", args=[category.pk])
+        )
+
+        self.assertRedirects(response, reverse("expenses:category-list"))
+        self.assertFalse(Category.objects.filter(pk=category.pk).exists())
+        expense.refresh_from_db()
+        self.assertIsNone(expense.category)
+
+    def test_cannot_delete_another_user_category(self):
+        user_model = get_user_model()
+        current_user = user_model.objects.create_user(username="deleter")
+        other_user = user_model.objects.create_user(username="other-owner")
+
+        category = Category.objects.create(
+            owner=other_user,
+            name="Продукти",
+        )
+
+        self.client.force_login(current_user)
+        response = self.client.post(
+            reverse("expenses:category-delete", args=[category.pk])
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(Category.objects.filter(pk=category.pk).exists())
+
 class CategoryFormTest(TestCase):
     def test_exposes_only_name_field(self):
         form = CategoryForm()

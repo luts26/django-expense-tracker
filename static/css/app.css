@@ -148,3 +148,13 @@ ul.items li {
     padding: 0.6rem 0;
     border-bottom: 1px solid var(--border);
 }
+
+ul.items .actions {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+}
+
+ul.items .actions form {
+    margin: 0;
+}

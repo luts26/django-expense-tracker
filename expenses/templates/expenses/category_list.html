@@ -15,8 +15,14 @@
 <ul class="items">
     {% for category in categories %}
         <li>
-            {{ category.name }}
-            <a href="{% url 'expenses:category-update' category.pk %}">Редагувати</a>
+            <span>{{ category.name }}</span>
+            <span class="actions">
+                <a href="{% url 'expenses:category-update' category.pk %}">Редагувати</a>
+                <form method="post" action="{% url 'expenses:category-delete' category.pk %}">
+                    {% csrf_token %}
+                    <button type="submit">Видалити</button>
+                </form>
+            </span>
         </li>
     {% empty %}
         <li>Категорій поки немає.</li>

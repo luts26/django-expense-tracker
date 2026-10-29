@@ -129,6 +129,18 @@ def category_update(request, pk):
     )
 
 @login_required
+@require_POST
+def category_delete(request, pk):
+    category = get_object_or_404(
+        Category,
+        pk=pk,
+        owner=request.user,
+    )
+    category.delete()
+
+    return redirect("expenses:category-list")
+
+@login_required
 def expense_report(request):
     rows = (
         Expense.objects.filter(owner=request.user)
