@@ -6,6 +6,14 @@ Personal expense tracker built with Django and Django REST Framework: per-user e
 
 **Status:** In active development.
 
+## Screenshots
+
+| Expenses | Category report |
+|---|---|
+| ![Expense list](docs/screenshots/expenses.png) | ![Category report](docs/screenshots/report.png) |
+
+![Browsable API](docs/screenshots/api.png)
+
 ## Features
 
 - User authentication using Django's built-in authentication system.
