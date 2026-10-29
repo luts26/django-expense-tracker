@@ -96,6 +96,12 @@ the account you created.
 
 Requires Docker with the Compose plugin.
 
+Create your local environment file and set a db, user and password:
+
+```bash
+cp .env.example .env
+```
+
 Build and start the app and PostgreSQL:
 
 ```bash
@@ -125,13 +131,12 @@ PostgreSQL is also published on `127.0.0.1:5433`, so the project can run
 from a local virtual environment against it:
 
 ```bash
-export POSTGRES_DB=expenses POSTGRES_USER=expenses POSTGRES_PASSWORD=expenses POSTGRES_PORT=5433
+export POSTGRES_DB=<value from .env> POSTGRES_USER=<value from .env> POSTGRES_PASSWORD=<value from .env> POSTGRES_PORT=5433
 python manage.py migrate
 ```
 
 Without the `POSTGRES_*` variables the project uses SQLite.
 
-The credentials in `docker-compose.yml` are for local development only.
 The container runs Django's development server and is not a production setup.
 
 ## Tests
