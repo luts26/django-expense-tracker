@@ -9,7 +9,7 @@ from django.test import Client, TestCase
 from rest_framework.test import APITestCase, APIRequestFactory
 
 from .models import Category, Expense
-from .forms import CategoryForm
+from .forms import CategoryForm, ExpenseFilterForm
 from .serializers import ExpenseSerializer
 
 class ExpenseModelTest(TestCase):
@@ -945,3 +945,85 @@ class ExpenseExportCsvTest(TestCase):
         self.assertTrue(response["Content-Type"].startswith("text/csv"))
         text = response.content.decode("utf-8-sig")
         self.assertIn("'=1+1", text)
+
+class ExpenseFilterFormTest(TestCase):
+    def test_rejects_category_of_another_user(self):
+        user_model = get_user_model()
+        owner = user_model.objects.create_user(username="filter-owner")
+        other = user_model.objects.create_user(username="filter-other")
+        foreign = Category.objects.create(owner=other, name="Чужа")
+
+        form = ExpenseFilterForm({"category": foreign.pk}, user=owner)
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("category", form.errors)
+
+    def test_rejects_reversed_date_range(self):
+        user_model = get_user_model()
+        owner = user_model.objects.create_user(username="filter-date-owner")
+
+        form = ExpenseFilterForm(
+            {"date_from": "2026-10-20", "date_to": "2026-10-10"},
+            user=owner
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertTrue(form.non_field_errors())
+
+class ExpenseListFilterTest(TestCase):
+    def test_filters_by_date_range(self):
+        user = get_user_model().objects.create_user(username="list-filter-user")
+        for description, day in [("Рано", 1), ("Всередині", 15), ("Пізно", 28)]:
+            Expense.objects.create(
+                owner=user,
+                amount=Decimal("10.00"),
+                description=description,
+                spent_at=date(2026, 10, day),
+            )
+        self.client.force_login(user)
+
+        response = self.client.get(
+            reverse("expenses:list"),
+            {"date_from": "2026-10-10", "date_to": "2026-10-20"},
+        )
+
+        self.assertEqual(
+            [e.description for e in response.context["expenses"]],
+            ["Всередині"],
+        )
+        self.assertEqual(response.context["total"], Decimal("10.00"))
+
+    def test_filters_by_category(self):
+        user = get_user_model().objects.create_user(username="category-filter-user")
+        
+        category_food = Category.objects.create(owner=user, name="Їжа")
+        category_transport = Category.objects.create(owner=user, name="Транспорт")
+        
+        expense_food = Expense.objects.create(
+            owner=user,
+            amount=Decimal("15.50"),
+            description="Обід",
+            spent_at=date(2026, 10, 15),
+            category=category_food,
+        )
+        Expense.objects.create(
+            owner=user,
+            amount=Decimal("40.00"),
+            description="Таксі",
+            spent_at=date(2026, 10, 15),
+            category=category_transport,
+        )
+        
+        self.client.force_login(user)
+
+        response = self.client.get(
+            reverse("expenses:list"),
+            {"category": category_food.pk},
+        )
+
+        self.assertEqual(
+            [e.description for e in response.context["expenses"]],
+            ["Обід"],
+        )
+        self.assertEqual(response.context["total"], Decimal("15.50"))
+

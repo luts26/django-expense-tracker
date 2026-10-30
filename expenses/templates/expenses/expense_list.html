@@ -10,6 +10,11 @@
     <a href="{% url 'expenses:create' %}">Додати витрату</a>
     <a href="{% url 'expenses:export-csv' %}">Експорт у CSV</a>
 </div>
+<form method="get" class="filters">
+    {{ filter_form.as_p }}
+    <button type="submit">Фільтрувати</button>
+    <a href="{% url 'expenses:list' %}">Скинути</a>
+</form>
 
 {% if expenses %}
     <table class="expenses">

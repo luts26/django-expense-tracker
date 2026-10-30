@@ -9,7 +9,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.db.models import Count, Sum
 
 
-from .forms import CategoryForm, ExpenseForm
+from .forms import CategoryForm, ExpenseForm, ExpenseFilterForm
 from .models import Category, Expense
 
 def _csv_save(value):
@@ -162,6 +162,16 @@ def expense_list(request):
         owner=request.user,
     ).order_by("-spent_at", "-id")
 
+    filter_form = ExpenseFilterForm(request.GET, user=request.user)
+    if filter_form.is_valid():
+        data = filter_form.cleaned_data
+        if data["date_from"]:
+            expenses = expenses.filter(spent_at__gte=data["date_from"])
+        if data["date_to"]:
+            expenses = expenses.filter(spent_at__lte=data["date_to"])
+        if data["category"]:
+            expenses = expenses.filter(category=data["category"])
+
     total = expenses.aggregate(total=Sum("amount"))["total"]
     total = total or Decimal("0.00")
 
@@ -171,6 +181,7 @@ def expense_list(request):
         {
             "expenses": expenses,
             "total": total,
+            "filter_form": filter_form,
         },
     )
 

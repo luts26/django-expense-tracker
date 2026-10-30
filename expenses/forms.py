@@ -46,3 +46,35 @@ class CategoryForm(forms.ModelForm):
             )
 
         return name
+
+class ExpenseFilterForm(forms.Form):
+    date_from = forms.DateField(
+        label="Від",
+        required=False,
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
+    date_to = forms.DateField(
+        label="До",
+        required=False,
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
+    category = forms.ModelChoiceField(
+        label="Категорія",
+        queryset=Category.objects.none(),
+        required=False,
+        empty_label="Усі категорії",
+    )
+
+    def __init__(self, *args, user, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["category"].queryset = Category.objects.filter(owner=user)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        date_from = cleaned_data.get("date_from")
+        date_to = cleaned_data.get("date_to")
+        if date_from and date_to and date_from > date_to:
+            raise forms.ValidationError(
+                "Дата 'від' не може бути пізніше за дату 'до'"
+            )
+        return cleaned_data

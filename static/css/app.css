@@ -158,3 +158,20 @@ ul.items .actions {
 ul.items .actions form {
     margin: 0;
 }
+
+form.filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem 1rem;
+    margin: 1rem 0;
+}
+
+form.filters p {
+    margin: 0;
+    flex: 1 1 10rem;
+}
+
+form.filters .errorlist {
+    flex-basis: 100%;
+}
